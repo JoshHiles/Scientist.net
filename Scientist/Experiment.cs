@@ -1,74 +1,159 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Scientist
 {
-    public class Experiment<T>(string name, Func<T> control, bool throwOnMismatch = false) : IExperiment<T>
+    public class Experiment<T> 
     {
-        private readonly List<Func<T>> _candidates = [];
-        public IExperiment<T> AddCandidate(Func<T> candidate)
+        public string Name = nameof(T);
+        private Dictionary<string, Func<Task<T>>> _candidates = [];
+        private bool _asyncExperiment = false;
+
+        public Experiment(string name, Func<T> control)
         {
-            _candidates.Add(candidate);
+            Name = name;
+            _candidates.Add("control", () => Task.FromResult(control()));
+        }
+        public Experiment(string name, Func<Task<T>> control)
+        {
+            Name = name;
+            _asyncExperiment = true;
+            _candidates.Add("control", control);
+        }
+
+        private bool _throwOnMismatch = false;
+        public Experiment<T> ThrowOnMismatch()
+        {
+            _throwOnMismatch = true;
             return this;
         }
 
-        private Func<T, T, bool> _comparison = DefaultComparison;
+        public Experiment<T> AddCandidate(Func<T> candidate, string name = "")
+        {
+            AddCandidate(
+                    name == "" ? nameof(candidate) : name,
+                    () => Task.FromResult(candidate())
+                 );
+
+            return this;
+        }
+
+        public Experiment<T> AddCandidate(Func<Task<T>> candidate, string name = "")
+        {
+            AddCandidate(name == "" ? nameof(candidate) : name, candidate);
+
+            return this;
+        }
+
+        private Experiment<T> AddCandidate(string name, Func<Task<T>> candidate
+           )
+        {
+            if (_candidates.ContainsKey(name))
+            {
+                throw new InvalidOperationException($"You've already added {name}");
+            }
+            _candidates.Add(name, candidate);
+            return this;
+        }
+
+        private Func<T, T, bool> _comparator = (instance, comparand) =>
+        {
+            return (instance == null && comparand == null)
+                || (instance != null && instance.Equals(comparand))
+                || CompareInstances(instance as IEquatable<T>, comparand);
+        };
+
+        static bool CompareInstances(IEquatable<T> instance, T comparand) => instance != null && instance.Equals(comparand);
+
         private bool _comparisonOverride = false;
-        public IExperiment<T> Compare(Func<T, T, bool> comparison)
+        public Experiment<T> Compare(Func<T, T, bool> comparison)
         {
             if (_comparisonOverride)
                 throw new ArgumentException("Compare has already been set", nameof(comparison));
 
             _comparisonOverride = true;
-            _comparison = comparison;
+            _comparator = comparison;
 
             return this;
         }
-        static readonly Func<T, T, bool> DefaultComparison = (instance, comparand) =>
+
+        private readonly Dictionary<string, dynamic> _contexts = [];
+        public Experiment<T> AddContext(string key, dynamic data)
         {
-            return (instance == null && comparand == null)
-                || (instance != null && instance.Equals(comparand))
-                || (CompareInstances(instance as IEquatable<T>, comparand));
-        };
-        static bool CompareInstances(IEquatable<T> instance, T comparand) => instance != null && instance.Equals(comparand);
-
-
-        public T Run()
-        {
-            var controlResult = control.Invoke();
-
-            CandidateRunner(controlResult);
-
-            return controlResult;
+            _contexts.Add(key, data);
+            return this;
         }
 
+
+        private Func<bool>? _runIf;
         public T RunIf(Func<bool> runIf)
         {
-            var controlResult = control.Invoke();
-            if (runIf.Invoke())
-            {
-                CandidateRunner(controlResult);
-            }
-            else
-            {
-                // TODO: Should alert that runIf was false?
-            }
-
-            return controlResult;
+            _runIf = runIf;
+            return Run();
         }
 
-        private void CandidateRunner(T controlResult)
+        private Results<T>? _results;
+        public T Run()
         {
-            foreach (var candidate in _candidates)
-            {
-                var candidateResult = candidate.Invoke();
+            return Task.Run(CandidateRunner).Result;
+        }
 
-                var result = _comparison(controlResult, controlResult);
-                if (candidateResult != null && !result && throwOnMismatch)
+        public async Task<T> RunAsync()
+        {
+            return await CandidateRunner();
+        }
+
+        private async Task<T> CandidateRunner()
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            var observations = new ConcurrentBag<Result<T>>
+            {
+                await Test<T>.Perform(control: _candidates.First(candidate => candidate.Key == "control").Value)
+            };
+
+
+
+           await Parallel.ForEachAsync(_candidates.Where(candidate => candidate.Key != "control"), async(candidate, cancellationToken)=>
+            {
+                if (_runIf == null || _runIf.Invoke())
                 {
-                    throw new MismatchException<T>(name, candidateResult);
+                    observations.Add(
+                        await Test<T>.Perform(
+                            candidateName: candidate.Key,
+                            candidate: candidate.Value,
+                            comparator: _comparator,
+                            controlResult: observations.First(x => x.IsControl).Value,
+                            throwOnMismatch: _throwOnMismatch
+                        )
+                    );
                 }
-            }
+            });
+            stopwatch.Stop();
+
+            _results = new Results<T>(
+                experimentName: Name,
+                overrallDuration: stopwatch.Elapsed,
+                results: observations,
+                overallMatch: observations.Any(x => x.Mismatched == true)
+                ); ;
+
+            return _results.Control.Value;
+        }
+
+        public void Publish(IPublisher publisher)
+        {
+            publisher.Publish(_results);
+        }
+
+        public async void PublishAsync(IPublisher publisher)
+        {
+            await publisher.Publish(_results);
         }
     }
 }

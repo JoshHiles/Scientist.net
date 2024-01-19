@@ -2,9 +2,9 @@ using FakeItEasy;
 using Scientist.Test.Helpers;
 using System;
 
-namespace Scientist.Test.Comparison
+namespace Scientist.Test
 {
-    public class ComparisonTests
+    public class Comparisons
     {
         [Test]
         public void OverrideComparison()
@@ -19,9 +19,9 @@ namespace Scientist.Test.Comparison
 
             var result = new Experiment<ComplexResult>(
                     name: nameof(OverrideComparison),
-                    control: testMethods.Control,
-                    throwOnMismatch: true
+                    control: testMethods.Control
                 )
+                .ThrowOnMismatch()
                 .AddCandidate(testMethods.Candidate)
                 .Compare((a, b) => a.Count == b.Count && a.Name == b.Name)
                 .Run();
@@ -44,15 +44,15 @@ namespace Scientist.Test.Comparison
 
             Action act = () => new Experiment<ComplexResult>(
                     name: nameof(ThrowMismatchOnOverrideComparison),
-                    control: testMethods.Control,
-                    throwOnMismatch: true
+                    control: testMethods.Control
                 )
+            .ThrowOnMismatch()
                 .AddCandidate(testMethods.Candidate)
                 .Compare((a, b) => a.Count == 2 && a.Name == b.Name)
                 .Run();
 
             act.Should().Throw<MismatchException<ComplexResult>>()
-               .WithMessage($"Experiment '{nameof(ThrowMismatchOnOverrideComparison)}' observations mismatched");
+               .WithMessage($"Experiment '{nameof(testMethods.Candidate)}' observations mismatched");
             A.CallTo(() => testMethods.Control()).MustHaveHappened();
             A.CallTo(() => testMethods.Candidate()).MustHaveHappened();
         }

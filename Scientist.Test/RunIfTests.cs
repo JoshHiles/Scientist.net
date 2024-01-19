@@ -2,13 +2,13 @@ using FakeItEasy;
 using Scientist.Test.Helpers;
 using System;
 
-namespace Scientist.Test.RunIf
+namespace Scientist.Test
 {
-    public class RunIfTests
+    public class RunIf
     {
-     
+
         [Test]
-        public void RunIfFalse()
+        public void ItDoesntRunCandidate()
         {
             int actualResult = 42;
 
@@ -18,8 +18,9 @@ namespace Scientist.Test.RunIf
             A.CallTo(() => runIf()).Returns(false);
 
             var result = new Experiment<int>(
-                name: nameof(RunIfFalse),
+                name: nameof(ItDoesntRunCandidate),
                 control: testMethods.Control)
+                .ThrowOnMismatch()
                 .AddCandidate(testMethods.Candidate)
                 .RunIf(runIf);
 
@@ -30,18 +31,20 @@ namespace Scientist.Test.RunIf
         }
 
         [Test]
-        public void RunIfTrue()
+        public void ItRunsCandidate()
         {
             int actualResult = 42;
 
             var testMethods = A.Fake<ITestClass<int>>();
             var runIf = A.Fake<Func<bool>>();
             A.CallTo(() => testMethods.Control()).Returns(actualResult);
+            A.CallTo(() => testMethods.Candidate()).Returns(actualResult);
             A.CallTo(() => runIf()).Returns(true);
 
             var result = new Experiment<int>(
-                name: nameof(RunIfTrue),
+                name: nameof(ItRunsCandidate),
                 control: testMethods.Control)
+                .ThrowOnMismatch()
                 .AddCandidate(testMethods.Candidate)
                 .RunIf(runIf);
 

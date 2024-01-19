@@ -2,7 +2,7 @@
 
 namespace Scientist.Benchmark
 {
-    [MemoryDiagnoser]
+    [HtmlExporter]
     public class ExperimentBenchmarks
     {
         readonly Experiment<int> experiment;
@@ -12,16 +12,27 @@ namespace Scientist.Benchmark
             experiment = new Experiment<int>(name: "Instance", control: FortyTwo);
         }
 
-        [Benchmark]
+        [Benchmark(Baseline = true)]
         public int Static()
         {
-            return new Experiment<int>(name: "Static", control: FortyTwo).Run();
+            return new Experiment<int>(nameof(Static), control: FortyTwo)
+                .AddCandidate(FortyTwo)
+                .Run();
         }
 
-        [Benchmark(Baseline = false)]
-        public int Instance()
+        // Need to name candidates something
+        //[Benchmark]
+        //public int Instance()
+        //{
+        //    return experiment.AddCandidate(FortyTwo).Run();
+        //}
+
+        [Benchmark]
+        public int Multiple()
         {
-            return experiment.Run();
+            return new Experiment<int>(nameof(Multiple), control: FortyTwo)
+                .AddCandidate(FortyTwo)
+                .Run();
         }
 
         private static int FortyTwo() => 42;
