@@ -5,6 +5,30 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+
+  <PropertyGroup>
+    <!-- https://learn.microsoft.com/en-gb/nuget/create-packages/package-authoring-best-practices -->
+    <PackageId>Scientist</PackageId>
+    <PackageVersion>3.0.0-alpha</PackageVersion>
+    <Authors>
+      <!-- TODO: Generate from commit history -->
+    </Authors>
+    <Description>Implementation of the Scientist library for .NET, inspired by the Ruby library from
+      GitHub</Description>
+    <PackageProjectUrl>https://github.com/scientistproject/Scientist.net</PackageProjectUrl>
+    <PackageIcon>
+      https://raw.githubusercontent.com/scientistproject/Scientist.net/master/assets/scientist-logo-64x64.png</PackageIcon>
+    <!-- Should we pack readme? <PackageReadmeFile></PackageReadmeFile> -->
+    <RepositoryUrl>https://github.com/scientistproject/Scientist.net.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>scientist;refactoring</PackageTags>
+    <PackageReleaseNotes>
+      <!-- Generate from release notes? -->
+    </PackageReleaseNotes>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseURL>https://github.com/scientistproject/Scientist.net/blob/master/LICENSE.txt</PackageLicenseURL>
+  </PropertyGroup>
+
   <PropertyGroup>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
