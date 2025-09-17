@@ -1,0 +1,47 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [3.0.0]
+  pull_request:
+    branches: [3.0.0]
+  schedule:
+    - cron: "0 0 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["csharp"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.x
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+
+      - run: dotnet restore --locked-mode
+
+      - run: |
+          dotnet build /p:UseSharedCompilation=false
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
