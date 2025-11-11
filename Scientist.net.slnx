@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Meta/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="appveyor.yml" />
+    <File Path="build.cmd" />
+    <File Path="build.fsx" />
+    <File Path="LICENSE.txt" />
+    <File Path="README.md" />
+    <File Path="ReleaseNotes.md" />
+  </Folder>
+  <Project Path="Scientist/Scientist.csproj" />
+  <Project Path="Scientist.Benchmark/Scientist.Benchmark.csproj" />
+  <Project Path="Scientist.Test/Scientist.Test.csproj" />
+</Solution>
